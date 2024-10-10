@@ -1,0 +1,8 @@
+pandas
+numpy
+streamlit
+psycopg2-binary
+hashlib
+plotly
+matplotlib
+xlsxwriter
