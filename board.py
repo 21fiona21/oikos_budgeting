@@ -12,6 +12,7 @@ import plotly.express as px
 import os
 
 
+
 # Benutzer und Passwörter aus Umgebungsvariablen lesen
 users = {
     "oikos_board": hashlib.sha256(os.getenv("OIKOS_BOARD_PASSWORD").encode()).hexdigest(),
@@ -47,11 +48,11 @@ def app():
         try:
             # Verbindung zur PostgreSQL-Datenbank herstellen
             connection = psycopg2.connect(
-                host="budgetingdb.cli608e6ifq1.eu-central-1.rds.amazonaws.com",
-                port="5432",
-                dbname="budgetingdb",
-                user="postgres",
-                password="zosNyr-fisnir-2xudhy"
+                host=os.getenv("DB_HOST"),
+                port=os.getenv("DB_PORT"),
+                dbname=os.getenv("DB_NAME"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD")
             )
             cursor = connection.cursor()
 
@@ -247,11 +248,11 @@ def app():
             try:
                 # Verbindung zur PostgreSQL-Datenbank herstellen
                 connection = psycopg2.connect(
-                    host="budgetingdb.cli608e6ifq1.eu-central-1.rds.amazonaws.com",
-                    port="5432",
-                    dbname="budgetingdb",
-                    user="postgres",
-                    password="zosNyr-fisnir-2xudhy"
+                    host=os.getenv("DB_HOST"),
+                    port=os.getenv("DB_PORT"),
+                    dbname=os.getenv("DB_NAME"),
+                    user=os.getenv("DB_USER"),
+                    password=os.getenv("DB_PASSWORD")
                 )
 
                 cursor = connection.cursor()
@@ -1083,339 +1084,6 @@ def app():
         st.plotly_chart(fig)
 
 
-        # # Schritt 1: Erstelle eine vereinfachte Version des DataFrames für die Heatmap
-        # heatmap_df = df[['project', 'priority', 'worst_case']]
-
-        # # Schritt 2: Aggregiere den DataFrame nach Projekt, um Worst-Case-Kosten und Prioritäten zu erhalten
-        # heatmap_df = heatmap_df.groupby('project').agg({
-        #     'priority': 'mean',  # Priorität als Durchschnitt pro Projekt
-        #     'worst_case': 'sum'  # Worst-Case summieren, um das Risiko zu messen
-        # }).reset_index()
-
-        # # Schritt 3: Definiere die Werte für die X-Achse (Priorität) und die Y-Achse (Projekt)
-        # projects = heatmap_df['project']
-        # priorities = heatmap_df['priority']
-        # risks = heatmap_df['worst_case']
-
-        # # Schritt 4: Erstelle eine Heatmap mit Plotly
-        # fig = go.Figure(data=go.Heatmap(
-        #     z=risks,  # Z-Werte für die Farbe (Risiko basierend auf Worst-Case)
-        #     x=priorities,  # X-Achse: Prioritäten
-        #     y=projects,  # Y-Achse: Projekte
-        #     colorscale='Reds',  # Verwende eine rote Farbskala für das Risiko
-        #     colorbar=dict(title="Worst Case (CHF)")  # Farbskala beschriften
-        # ))
-
-        # # Schritt 5: Layout und Titel anpassen
-        # fig.update_layout(
-        #     title='Risk Assessment Heatmap',
-        #     xaxis_title='Project Priority',
-        #     yaxis_title='Project',
-        #     height=600,
-        #     width=900
-        # )
-
-        # # Schritt 6: Zeige die Heatmap in Streamlit an
-        # st.plotly_chart(fig)
-
-
-
-        # # Schritt 1: Erstelle eine vereinfachte Version des DataFrames für die Risikomatrix
-        # matrix_df = df[['project', 'priority', 'worst_case']]
-
-        # # Schritt 2: Aggregiere den DataFrame nach Projekt, um Worst-Case-Kosten und Prioritäten zu erhalten
-        # matrix_df = matrix_df.groupby('project').agg({
-        #     'priority': 'mean',  # Priorität als Durchschnitt pro Projekt
-        #     'worst_case': 'sum'  # Worst-Case summieren, um das Risiko zu messen
-        # }).reset_index()
-
-        # # Schritt 3: Definiere Kategorien für Risiko und Priorität
-        # # - Risiko (Worst Case): Niedrig (< Median), Hoch (>= Median)
-        # # - Priorität: Niedrig (<= 3), Hoch (> 3)
-
-        # risk_median = matrix_df['worst_case'].median()
-        # matrix_df['risk_category'] = matrix_df['worst_case'].apply(lambda x: 'High Risk' if x >= risk_median else 'Low Risk')
-        # matrix_df['priority_category'] = matrix_df['priority'].apply(lambda x: 'High Priority' if x > 3 else 'Low Priority')
-
-        # # Schritt 4: Erstelle eine Spalte für die 2x2-Matrix-Kategorisierung
-        # def classify_quadrant(row):
-        #     if row['risk_category'] == 'High Risk' and row['priority_category'] == 'High Priority':
-        #         return 'High Risk / High Priority'
-        #     elif row['risk_category'] == 'High Risk' and row['priority_category'] == 'Low Priority':
-        #         return 'High Risk / Low Priority'
-        #     elif row['risk_category'] == 'Low Risk' and row['priority_category'] == 'High Priority':
-        #         return 'Low Risk / High Priority'
-        #     else:
-        #         return 'Low Risk / Low Priority'
-
-        # matrix_df['quadrant'] = matrix_df.apply(classify_quadrant, axis=1)
-
-        # # Schritt 5: Erstelle eine Risikomatrix als Scatterplot mit Plotly Express
-        # fig = px.scatter(
-        #     matrix_df,
-        #     x='priority',  # Priorität auf der X-Achse
-        #     y='worst_case',  # Risiko (Worst-Case) auf der Y-Achse
-        #     color='quadrant',  # Quadranten-Kategorisierung
-        #     hover_data=['project', 'priority', 'worst_case'],  # Zusätzliche Informationen beim Hover-Effekt
-        #     labels={'priority': 'Priority', 'worst_case': 'Worst Case (Risk)'},  # Achsenbeschriftungen
-        #     size='worst_case',  # Die Größe der Punkte basierend auf dem Risiko (Worst-Case)
-        #     size_max=60,  # Maximale Punktgröße
-        #     color_discrete_map={
-        #         'High Risk / High Priority': '#FF6347',  # Rot für hohes Risiko/hohe Priorität
-        #         'High Risk / Low Priority': '#FFD700',  # Gelb für hohes Risiko/niedrige Priorität
-        #         'Low Risk / High Priority': '#90EE90',  # Grün für niedriges Risiko/hohe Priorität
-        #         'Low Risk / Low Priority': '#1E90FF'   # Blau für niedriges Risiko/niedrige Priorität
-        #     }
-        # )
-
-        # # Schritt 6: Füge Linien für die 2x2-Matrix hinzu (horizontale und vertikale Linien)
-        # fig.add_shape(type='line', x0=3, y0=0, x1=3, y1=matrix_df['worst_case'].max(), line=dict(color='black', width=2))  # Vertikale Linie (Priorität = 3)
-        # fig.add_shape(type='line', x0=matrix_df['priority'].min(), y0=risk_median, x1=matrix_df['priority'].max(), y1=risk_median, line=dict(color='black', width=2))  # Horizontale Linie (Median des Risikos)
-
-        # # Schritt 7: Layout anpassen
-        # fig.update_layout(
-        #     title='Project Risk Matrix (2x2)',
-        #     xaxis_title='Project Priority',
-        #     yaxis_title='Risk (Worst Case)',
-        #     xaxis=dict(range=[matrix_df['priority'].min()-0.5, matrix_df['priority'].max()+0.5]),
-        #     yaxis=dict(range=[0, matrix_df['worst_case'].max() + 50]),  # Reserve etwas Platz auf der Y-Achse
-        #     height=700,
-        #     width=900
-        # )
-
-        # # Schritt 8: Zeige die Risikomatrix in Streamlit an
-        # st.plotly_chart(fig)
-
-
-
-
-        # # Schritt 1: Berechne die Differenzen zwischen konservativen und geschätzten Ausgaben
-        # df['delta'] = df['conservative'] - df['estimated']
-
-        # # Schritt 2: Aggregiere die Daten nach Projekt
-        # delta_df = df.groupby('project').agg({
-        #     'estimated': 'sum',
-        #     'conservative': 'sum',
-        #     'delta': 'sum'
-        # }).reset_index()
-
-        # # Schritt 3: Erstelle ein Abweichungsbalkendiagramm mit Plotly
-        # fig = go.Figure()
-
-        # # Füge Balken für geschätzte Ausgaben hinzu (Referenzwert)
-        # fig.add_trace(go.Bar(
-        #     x=delta_df['project'],
-        #     y=delta_df['estimated'],
-        #     name='Estimated',
-        #     marker_color='blue',
-        #     hoverinfo='y'
-        # ))
-
-        # # Füge Balken für die Abweichung hinzu (Differenz zwischen konservativ und geschätzt)
-        # fig.add_trace(go.Bar(
-        #     x=delta_df['project'],
-        #     y=delta_df['delta'],
-        #     name='Conservative - Estimated (Delta)',
-        #     marker_color='orange',
-        #     hoverinfo='y'
-        # ))
-
-        # # Schritt 4: Layout des Diagramms anpassen
-        # fig.update_layout(
-        #     title='Delta Chart: Conservative vs Estimated Expenses per Project',
-        #     xaxis_title='Project',
-        #     yaxis_title='Amount (CHF)',
-        #     barmode='overlay',  # Overlay-Modus, um den Unterschied sichtbar zu machen
-        #     height=600,
-        #     width=900
-        # )
-
-        # # Schritt 5: Zeige das Diagramm in Streamlit an
-        # st.plotly_chart(fig)
-
-
-
-        # # Schritt 1: Sortiere den DataFrame nach 'conservative' Werten absteigend
-        # df = df.sort_values(by='conservative', ascending=False)
-
-        # # Schritt 2: Berechne die kumulierten Summen für conservative, worst_case und estimated
-        # df['cumulative_conservative'] = df['conservative'].cumsum()
-        # df['cumulative_worst_case'] = df['worst_case'].cumsum()
-        # df['cumulative_estimated'] = df['estimated'].cumsum()
-
-        # # Schritt 3: Gruppiere die Daten nach Projekten und behalte die kumulierten Summen
-        # cumulative_df = df.groupby('project').agg({
-        #     'conservative': 'sum',
-        #     'worst_case': 'sum',
-        #     'estimated': 'sum',
-        #     'cumulative_conservative': 'last',  # Kumulierte Summe der konservativen Werte
-        #     'cumulative_worst_case': 'last',    # Kumulierte Summe der worst-case Werte
-        #     'cumulative_estimated': 'last'      # Kumulierte Summe der estimated Werte
-        # }).reset_index()
-
-        # # Schritt 4: Erstelle den Cumulative Risk Plot mit Plotly
-        # fig = go.Figure()
-
-        # # Linie für kumulierte konservative Schätzungen
-        # fig.add_trace(go.Scatter(
-        #     x=cumulative_df['project'],
-        #     y=cumulative_df['cumulative_conservative'],
-        #     mode='lines+markers',
-        #     name='Cumulative Conservative',
-        #     marker=dict(color='orange'),
-        #     line=dict(width=3),
-        #     hoverinfo='y'
-        # ))
-
-        # # Linie für kumulierte Worst-Case-Schätzungen
-        # fig.add_trace(go.Scatter(
-        #     x=cumulative_df['project'],
-        #     y=cumulative_df['cumulative_worst_case'],
-        #     mode='lines+markers',
-        #     name='Cumulative Worst Case',
-        #     marker=dict(color='red'),
-        #     line=dict(width=3),
-        #     hoverinfo='y'
-        # ))
-
-        # # Linie für kumulierte Estimated-Schätzungen
-        # fig.add_trace(go.Scatter(
-        #     x=cumulative_df['project'],
-        #     y=cumulative_df['cumulative_estimated'],
-        #     mode='lines+markers',
-        #     name='Cumulative Estimated',
-        #     marker=dict(color='yellow'),
-        #     line=dict(width=3),
-        #     hoverinfo='y'
-        # ))
-
-        # # Schritt 5: Layout des Diagramms anpassen
-        # fig.update_layout(
-        #     title='Cumulative Risk Plot: Conservative, Worst Case & Estimated',
-        #     xaxis_title='Project',
-        #     yaxis_title='Cumulative Amount (CHF)',
-        #     height=600,
-        #     width=900
-        # )
-
-        # # Schritt 6: Zeige das Diagramm in Streamlit an
-        # st.plotly_chart(fig)
-
-
-
-
-        # # Schritt 1: Aggregiere die Werte nach Projekt
-        # project_totals = df.groupby('project').agg({
-        #     'exact_amount': 'sum',
-        #     'estimated': 'sum',
-        #     'conservative': 'sum',
-        #     'worst_case': 'sum'
-        # }).reset_index()
-
-        # # Schritt 2: Erstelle den Plotly-Figure
-        # fig = go.Figure()
-
-        # # Füge die Linie für Exact Expenses hinzu
-        # fig.add_trace(go.Scatter(
-        #     x=project_totals['project'],
-        #     y=project_totals['exact_amount'],
-        #     mode='lines+markers',
-        #     name='Exact Expenses',
-        #     marker=dict(color='blue'),
-        #     line=dict(width=3),
-        #     hoverinfo='y'
-        # ))
-
-        # # Füge die Linie für Estimated Expenses hinzu
-        # fig.add_trace(go.Scatter(
-        #     x=project_totals['project'],
-        #     y=project_totals['estimated'],
-        #     mode='lines+markers',
-        #     name='Estimated Expenses',
-        #     marker=dict(color='green'),
-        #     line=dict(width=3),
-        #     hoverinfo='y'
-        # ))
-
-        # # Füge die Worst-Case-Linie hinzu
-        # fig.add_trace(go.Scatter(
-        #     x=project_totals['project'],
-        #     y=project_totals['worst_case'],
-        #     mode='lines+markers',
-        #     name='Worst Case Expenses',
-        #     marker=dict(color='red'),
-        #     line=dict(width=3),
-        #     hoverinfo='y',
-        #     fill=None  # Keine Füllung
-        # ))
-
-        # # Füge die Conservative-Linie hinzu und fülle den Bereich zwischen Conservative und Worst Case
-        # fig.add_trace(go.Scatter(
-        #     x=project_totals['project'],
-        #     y=project_totals['conservative'],
-        #     mode='lines+markers',
-        #     name='Conservative Expenses',
-        #     marker=dict(color='orange'),
-        #     line=dict(width=3),
-        #     hoverinfo='y',
-        #     fill='tonexty',  # Fülle den Bereich zwischen dieser Linie und der vorherigen (Worst Case)
-        #     fillcolor='rgba(255, 165, 0, 0.2)'  # Füllfarbe zwischen Conservative und Worst Case
-        # ))
-
-        # # Layout des Diagramms anpassen
-        # fig.update_layout(
-        #     title='Prognostizierte Kostenspanne pro Projekt',
-        #     xaxis_title='Project',
-        #     yaxis_title='Expenses (CHF)',
-        #     height=600,
-        #     width=900,
-        #     hovermode="x unified"
-        # )
-
-        # # Zeige das Diagramm in Streamlit an
-        # st.plotly_chart(fig)
-
-
-
-
-        # # Schritt 1: Aggregiere die Kosten pro Projekt
-        # project_totals = df.groupby('project').agg({
-        #     'exact_amount': 'sum',
-        #     'estimated': 'sum',
-        #     'conservative': 'sum',
-        #     'worst_case': 'sum'
-        # }).reset_index()
-
-        # # Schritt 2: Berechne die Gesamtsummen für alle Kostenarten
-        # project_totals['total_cost'] = project_totals['exact_amount'] + project_totals['estimated'] + project_totals['conservative'] + project_totals['worst_case']
-
-        # # Schritt 3: Erstelle eine Treemap mit Plotly Express
-        # fig = px.treemap(
-        #     project_totals,
-        #     path=['project'],  # Hierarchie der Treemap (nur Projektname in diesem Fall)
-        #     values='total_cost',  # Größe der Blöcke entspricht den Gesamtkosten
-        #     color='total_cost',  # Farbe basierend auf den Gesamtkosten
-        #     hover_data={
-        #         'exact_amount': True,
-        #         'estimated': True,
-        #         'conservative': True,
-        #         'worst_case': True
-        #     },
-        #     color_continuous_scale='RdBu',  # Farben von rot (hohe Kosten) bis blau (niedrige Kosten)
-        #     title="Kostenstruktur pro Projekt"
-        # )
-
-        # # Layout anpassen
-        # fig.update_layout(
-        #     margin=dict(t=50, l=25, r=25, b=25),
-        #     height=600,
-        #     width=900,
-        # )
-
-        # # Zeige die Treemap in Streamlit an
-        # st.plotly_chart(fig)
-
-
 
 
 
@@ -1471,11 +1139,11 @@ def app():
             try:
                 # Verbindung zur PostgreSQL-Datenbank herstellen
                 connection = psycopg2.connect(
-                    host="budgetingdb.cli608e6ifq1.eu-central-1.rds.amazonaws.com",
-                    port="5432",
-                    dbname="budgetingdb", 
-                    user="postgres",
-                    password="zosNyr-fisnir-2xudhy"
+                    host=os.getenv("DB_HOST"),
+                    port=os.getenv("DB_PORT"),
+                    dbname=os.getenv("DB_NAME"),
+                    user=os.getenv("DB_USER"),
+                    password=os.getenv("DB_PASSWORD")
                 )
                 
                 cursor = connection.cursor()
@@ -1571,11 +1239,11 @@ def app():
         def delete_expense_by_id(expense_id):
             try:
                 connection = psycopg2.connect(
-                    host="budgetingdb.cli608e6ifq1.eu-central-1.rds.amazonaws.com",
-                    port="5432",
-                    dbname="budgetingdb", 
-                    user="postgres",
-                    password="zosNyr-fisnir-2xudhy"
+                    host=os.getenv("DB_HOST"),
+                    port=os.getenv("DB_PORT"),
+                    dbname=os.getenv("DB_NAME"),
+                    user=os.getenv("DB_USER"),
+                    password=os.getenv("DB_PASSWORD")
                 )
                 cursor = connection.cursor()
 
@@ -1613,11 +1281,11 @@ def app():
                 try:
                     # Verbindung zur Datenbank herstellen
                     connection = psycopg2.connect(
-                        host="budgetingdb.cli608e6ifq1.eu-central-1.rds.amazonaws.com",
-                        port="5432",
-                        dbname="budgetingdb", 
-                        user="postgres",
-                        password="zosNyr-fisnir-2xudhy"
+                        host=os.getenv("DB_HOST"),
+                        port=os.getenv("DB_PORT"),
+                        dbname=os.getenv("DB_NAME"),
+                        user=os.getenv("DB_USER"),
+                        password=os.getenv("DB_PASSWORD")
                     )
                     cursor = connection.cursor()
 
@@ -1703,5 +1371,3 @@ if st.session_state["logged_in"]:
     app()  # Starte die Hauptanwendung, wenn der Benutzer eingeloggt ist
 else:
     login()  # Zeige die Login-Seite, wenn der Benutzer nicht eingeloggt ist
-
-
