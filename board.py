@@ -9,11 +9,12 @@ import matplotlib.patches as mpatches
 from io import BytesIO
 import xlsxwriter
 import plotly.express as px
+import os
 
 
-# Benutzer und Passwörter
+# Benutzer und Passwörter aus Umgebungsvariablen lesen
 users = {
-    "oikos_board": hashlib.sha256("pKxQ4ojxDM54".encode()).hexdigest(),
+    "oikos_board": hashlib.sha256(os.getenv("OIKOS_BOARD_PASSWORD").encode()).hexdigest(),
 }
 
 user_names = {
