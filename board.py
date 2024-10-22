@@ -79,13 +79,7 @@ def app():
 
     # Funktion zum Abrufen der Farbe basierend auf dem Projektnamen
     def get_color(project_name):
-        if project_name == "Project1":
-            return "#D4A5FF"
-        elif project_name == "Project2":
-            return "#B0E57C"
-        elif project_name == "Project3":
-            return "#A2CFFE"
-        elif project_name == "oikos Conference":
+        if project_name == "oikos Conference":
             return "#4386e8"
         elif project_name == "Sustainability Week":
             return "#66ddc1"
@@ -1174,7 +1168,7 @@ def app():
         # Dropdown für die Projektauswahl
         project = st.selectbox(
             "Select a project",
-            ["Project1", "Project2", "Project3", "oikos Conference", "Sustainability Week", "Action Days", 
+            ["oikos Conference", "Sustainability Week", "Action Days", 
             "Curriculum Change", "UN-DRESS", "ChangeHub", "oikos Solar", "oikos Catalyst", 
             "Climate Neutral Events", "oikos Consulting", "Sustainable Finance", "Oismak"]
         )
