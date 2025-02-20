@@ -10,7 +10,20 @@ from io import BytesIO
 import xlsxwriter
 import plotly.express as px
 import os
+import boto3
+import uuid
 
+
+# AWS DynamoDB-Client initialisieren
+dynamodb = boto3.resource(
+    "dynamodb",
+    region_name=os.getenv("AWS_REGION"),
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+)
+
+table_name = "oikos_budgeting"
+table = dynamodb.Table(table_name)
 
 
 # Benutzer und Passwörter aus Umgebungsvariablen lesen
@@ -44,37 +57,34 @@ def app():
     st.write("")
     st.header("View registered expenses")
 
+    # Funktion zum Abrufen aller Daten aus DynamoDB
     def get_data():
         try:
-            # Verbindung zur PostgreSQL-Datenbank herstellen
-            connection = psycopg2.connect(
-                host=os.getenv("DB_HOST"),
-                port=os.getenv("DB_PORT"),
-                dbname=os.getenv("DB_NAME"),
-                user=os.getenv("DB_USER"),
-                password=os.getenv("DB_PASSWORD")
-            )
-            cursor = connection.cursor()
+            response = table.scan()
+            data = response.get("Items", [])
+            
+            # Falls Tabelle leer ist, gib einen leeren DataFrame zurück
+            if not data:
+                return pd.DataFrame()
+    
+            # DynamoDB speichert Zahlen als Dezimal, daher in float konvertieren
+            for item in data:
+                if 'exact_amount' in item:
+                    item['exact_amount'] = float(item['exact_amount']) if item['exact_amount'] else None
+                if 'estimated' in item:
+                    item['estimated'] = float(item['estimated']) if item['estimated'] else None
+                if 'conservative' in item:
+                    item['conservative'] = float(item['conservative']) if item['conservative'] else None
+                if 'worst_case' in item:
+                    item['worst_case'] = float(item['worst_case']) if item['worst_case'] else None
+                if 'priority' in item:
+                    item['priority'] = int(item['priority']) if item['priority'] else None
 
-            # SQL-Abfrage ausführen, um alle Daten aus der Tabelle "expenses" abzurufen
-            cursor.execute("SELECT * FROM expenses;")
-            data = cursor.fetchall()
-
-            # Spaltennamen abrufen
-            colnames = [desc[0] for desc in cursor.description]
-
-            # In DataFrame umwandeln
-            df = pd.DataFrame(data, columns=colnames)
-
-            return df
-
-        except Exception as e:
-            st.error(f"Error connecting to database: {e}")
-
-        finally:
-            if connection:
-                cursor.close()
-                connection.close()
+        df = pd.DataFrame(data)
+        return df
+    except Exception as e:
+        st.error(f"Error connecting to DynamoDB: {e}")
+        return pd.DataFrame()
 
 
     # Funktion zum Abrufen der Farbe basierend auf dem Projektnamen
@@ -238,35 +248,18 @@ def app():
         # Generiere die Container basierend auf dem sortierten DataFrame
         st.write("")
 
+        # Funktion zum Aktualisieren des Status eines Eintrags
         def update_status(expense_id, new_status):
             try:
-                # Verbindung zur PostgreSQL-Datenbank herstellen
-                connection = psycopg2.connect(
-                    host=os.getenv("DB_HOST"),
-                    port=os.getenv("DB_PORT"),
-                    dbname=os.getenv("DB_NAME"),
-                    user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD")
+                table.update_item(
+                    Key={"id": str(expense_id)},  # ID muss String sein
+                    UpdateExpression="SET #s = :s",
+                    ExpressionAttributeNames={"#s": "status"},
+                    ExpressionAttributeValues={":s": new_status},
+                    ReturnValues="UPDATED_NEW"
                 )
-
-                cursor = connection.cursor()
-
-                # Konvertiere die expense_id zu einem regulären int, um den Fehler zu vermeiden
-                cursor.execute("""
-                    UPDATE expenses
-                    SET status = %s
-                    WHERE id = %s;
-                """, (new_status, int(expense_id)))  # Hier konvertieren wir die ID
-
-                connection.commit()
-
             except Exception as error:
                 st.error(f"Error updating expense status: {error}")
-
-            finally:
-                if connection:
-                    cursor.close()
-                    connection.close()
 
 
         def display_expenses_by_status(df, status, section_title):
@@ -1128,39 +1121,29 @@ def app():
         st.write("")
 
 
-        # Funktion zum Einfügen der Daten in die PostgreSQL-Datenbank mit Status
+        # Funktion zum Einfügen eines neuen Eintrags in DynamoDB
         def insert_expense(project, title, description, date, exact_amount, estimated, conservative, worst_case, priority, status="not assigned"):
             try:
-                # Verbindung zur PostgreSQL-Datenbank herstellen
-                connection = psycopg2.connect(
-                    host=os.getenv("DB_HOST"),
-                    port=os.getenv("DB_PORT"),
-                    dbname=os.getenv("DB_NAME"),
-                    user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD")
-                )
-                
-                cursor = connection.cursor()
-                
-                # Daten in die Tabelle expenses einfügen, jetzt inklusive Status
-                cursor.execute("""
-                    INSERT INTO expenses (project, title, description, expense_date, exact_amount, estimated, conservative, worst_case, priority, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (project, title, description, date, exact_amount, estimated, conservative, worst_case, priority, status))
-                
-                connection.commit()
+                expense_item = {
+                    "id": str(uuid.uuid4()),  # UUID als eindeutige ID (String!)
+                    "project": project,
+                    "title": title,
+                    "description": description,
+                    "expense_date": str(date) if date else None,
+                    "exact_amount": str(exact_amount) if exact_amount else None,
+                    "estimated": str(estimated) if estimated else None,
+                    "conservative": str(conservative) if conservative else None,
+                    "worst_case": str(worst_case) if worst_case else None,
+                    "priority": int(priority) if priority else None,
+                    "status": status
+                }
+                table.put_item(Item=expense_item)
                 st.success("Expense successfully saved!")
-                # Füge einen Button hinzu, um die App neu zu laden
                 if st.button("Refresh to view changes"):
-                    st.rerun() 
-            
+                    st.rerun()
             except Exception as error:
                 st.error(f"Error saving expense: {error}")
-            
-            finally:
-                if connection:
-                    cursor.close()
-                    connection.close()
+                
 
 
         st.subheader("Enter an expense")
@@ -1229,35 +1212,13 @@ def app():
 
 
 
-        # Funktion zum Löschen eines Eintrags aus der PostgreSQL-Datenbank
+        # Funktion zum Löschen eines Eintrags
         def delete_expense_by_id(expense_id):
             try:
-                connection = psycopg2.connect(
-                    host=os.getenv("DB_HOST"),
-                    port=os.getenv("DB_PORT"),
-                    dbname=os.getenv("DB_NAME"),
-                    user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD")
-                )
-                cursor = connection.cursor()
-
-                # SQL-Befehl zum Löschen des Eintrags mit der spezifischen ID
-                cursor.execute("DELETE FROM expenses WHERE id = %s RETURNING id;", (expense_id,))
-                deleted_id = cursor.fetchone()  # Überprüfen, ob eine Zeile gelöscht wurde
-                connection.commit()
-
-                if deleted_id:
-                    st.success(f"Expense with ID {expense_id} successfully deleted!")
-                else:
-                    st.error(f"No expense found with ID {expense_id}.")
-            
+                table.delete_item(Key={"id": str(expense_id)})  # ID muss String sein
+                st.success(f"Expense with ID {expense_id} successfully deleted!")
             except Exception as error:
                 st.error(f"Error deleting expense: {error}")
-            
-            finally:
-                if connection:
-                    cursor.close()
-                    connection.close()
 
 
         # ID-Eingabefeld zum Löschen
@@ -1273,31 +1234,17 @@ def app():
         if st.button("Check"):
             if expense_id_to_delete:
                 try:
-                    # Verbindung zur Datenbank herstellen
-                    connection = psycopg2.connect(
-                        host=os.getenv("DB_HOST"),
-                        port=os.getenv("DB_PORT"),
-                        dbname=os.getenv("DB_NAME"),
-                        user=os.getenv("DB_USER"),
-                        password=os.getenv("DB_PASSWORD")
-                    )
-                    cursor = connection.cursor()
-
-                    # SQL-Abfrage, um den Eintrag mit der spezifischen ID zu finden
-                    cursor.execute("SELECT * FROM expenses WHERE id = %s;", (expense_id_to_delete,))
-
-                    entry = cursor.fetchone()
-                    
+                    # Eintrag aus DynamoDB abrufen
+                    response = table.get_item(Key={"id": str(expense_id_to_delete)})
+                    entry = response.get("Item")
+        
                     if entry:
                         st.session_state["checked_expense"] = entry  # Speichere den Eintrag im Session-State
                     else:
                         st.error(f"No entry found with ID {expense_id_to_delete}")
+        
                 except Exception as error:
                     st.error(f"Error fetching expense: {error}")
-                finally:
-                    if connection:
-                        cursor.close()
-                        connection.close()
 
         # Zeige den überprüften Eintrag an, wenn er im Session-State vorhanden ist
         if st.session_state["checked_expense"]:
