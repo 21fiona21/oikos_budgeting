@@ -62,7 +62,7 @@ def app():
         try:
             response = table.scan()
             data = response.get("Items", [])
-            
+    
             # Falls Tabelle leer ist, gib einen leeren DataFrame zurück
             if not data:
                 return pd.DataFrame()
@@ -79,10 +79,10 @@ def app():
                     item['worst_case'] = float(item['worst_case']) if item['worst_case'] else None
                 if 'priority' in item:
                     item['priority'] = int(item['priority']) if item['priority'] else None
-
-        df = pd.DataFrame(data)
-        return df
-        
+    
+            df = pd.DataFrame(data)
+            return df
+    
         except Exception as e:
             st.error(f"Error connecting to DynamoDB: {e}")
             return pd.DataFrame()
