@@ -82,9 +82,10 @@ def app():
 
         df = pd.DataFrame(data)
         return df
-    except Exception as e:
-        st.error(f"Error connecting to DynamoDB: {e}")
-        return pd.DataFrame()
+        
+        except Exception as e:
+            st.error(f"Error connecting to DynamoDB: {e}")
+            return pd.DataFrame()
 
 
     # Funktion zum Abrufen der Farbe basierend auf dem Projektnamen
