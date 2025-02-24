@@ -1150,7 +1150,7 @@ def app():
                     "status": status
                 }
                 table.put_item(Item=expense_item)
-                st.success(f"Expense successfully saved! Assigned ID: {expense_id}")
+                st.success(f"Expense successfully saved!")
                 if st.button("Refresh to view changes"):
                     st.rerun()
             except Exception as error:
