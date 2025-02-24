@@ -1122,11 +1122,22 @@ def app():
         st.write("")
 
 
+        # Funktion zum Ermitteln der nächsten freien ID
+        def get_next_id():
+            try:
+                response = table.scan(ProjectionExpression="id")
+                existing_ids = [int(item["id"]) for item in response.get("Items", []) if item["id"].isdigit()]
+                return str(max(existing_ids) + 1) if existing_ids else "1"
+            except Exception as e:
+                st.error(f"Error retrieving next ID: {e}")
+                return "1"
+        
         # Funktion zum Einfügen eines neuen Eintrags in DynamoDB
         def insert_expense(project, title, description, date, exact_amount, estimated, conservative, worst_case, priority, status="not assigned"):
             try:
+                expense_id = get_next_id()  # Neue ID berechnen
                 expense_item = {
-                    "id": str(uuid.uuid4()),  # UUID als eindeutige ID (String!)
+                    "id": expense_id,  # Fortlaufende ID statt UUID
                     "project": project,
                     "title": title,
                     "description": description,
@@ -1139,7 +1150,7 @@ def app():
                     "status": status
                 }
                 table.put_item(Item=expense_item)
-                st.success("Expense successfully saved!")
+                st.success(f"Expense successfully saved! Assigned ID: {expense_id}")
                 if st.button("Refresh to view changes"):
                     st.rerun()
             except Exception as error:
@@ -1213,11 +1224,14 @@ def app():
 
 
 
+
+
         # Funktion zum Löschen eines Eintrags
         def delete_expense_by_id(expense_id):
             try:
-                table.delete_item(Key={"id": str(expense_id)})  # ID muss String sein
-                st.success(f"Expense with ID {expense_id} successfully deleted!")
+                expense_id_str = str(expense_id)  # Stelle sicher, dass die ID als String übergeben wird
+                table.delete_item(Key={"id": expense_id_str})
+                st.success(f"Expense with ID {expense_id_str} successfully deleted!")
             except Exception as error:
                 st.error(f"Error deleting expense: {error}")
 
