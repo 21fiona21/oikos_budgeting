@@ -1249,50 +1249,46 @@ def app():
         if st.button("Check"):
             if expense_id_to_delete:
                 try:
-                    # Eintrag aus DynamoDB abrufen
-                    response = table.get_item(Key={"id": str(expense_id_to_delete)})
+                    expense_id_str = str(expense_id_to_delete)  # ID in String umwandeln
+                    response = table.get_item(Key={"id": expense_id_str})
                     entry = response.get("Item")
         
                     if entry:
                         st.session_state["checked_expense"] = entry  # Speichere den Eintrag im Session-State
                     else:
-                        st.error(f"No entry found with ID {expense_id_to_delete}")
+                        st.error(f"No entry found with ID {expense_id_str}")
         
                 except Exception as error:
                     st.error(f"Error fetching expense: {error}")
-
-        # Zeige den überprüften Eintrag an, wenn er im Session-State vorhanden ist
+        
+        # Zeige den überprüften Eintrag an
         if st.session_state["checked_expense"]:
             entry = st.session_state["checked_expense"]
-            
-            # Setze die Farbe basierend auf dem Projektnamen des überprüften Eintrags
-            project_name = entry[1]  # Annahme: Der Projektname befindet sich im zweiten Feld des Eintrags
+        
+            # Stelle sicher, dass der Key "project" existiert
+            project_name = entry.get("project", "Unknown")
             color = get_color(project_name)
-            
+        
             container_content = f"""
                 <div style='background-color: {color}; padding: 15px; border-radius: 10px; margin-bottom: 10px;'>
-                    <p><strong>ID: </strong>{entry[0]}</p>
-                    <p>{entry[1]}<p>
-                    <h4>{entry[2]}</h4>
-                    <p>{entry[3]}</p>
-                    <p><strong>Date: </strong>{entry[4]}</p>
-                    <p><strong>Amount: </strong>CHF {entry[5] if entry[5] is not None else f"{entry[6]} / {entry[7]} / {entry[8]}"}</p>
-                    <p><strong>Priority: </strong>{entry[9]}</p>
+                    <p><strong>ID: </strong>{entry["id"]}</p>
+                    <p><strong>Project: </strong>{entry["project"]}</p>
+                    <h4>{entry["title"]}</h4>
+                    <p>{entry["description"]}</p>
+                    <p><strong>Date: </strong>{entry["expense_date"]}</p>
+                    <p><strong>Amount: </strong>CHF {entry["exact_amount"] if entry["exact_amount"] is not None else f"{entry['estimated']} / {entry['conservative']} / {entry['worst_case']}"}</p>
+                    <p><strong>Priority: </strong>{entry["priority"]}</p>
                 </div>
             """
             st.markdown(container_content, unsafe_allow_html=True)
-
-            
-            # Button zum Löschen anzeigen, nachdem der Eintrag angezeigt wurde
+        
+            # Button zum Löschen anzeigen
             if st.button("Delete"):
                 delete_expense_by_id(expense_id_to_delete)
-                # Nach dem Löschen den Eintrag aus dem Session-State entfernen
-                st.session_state["checked_expense"] = None
-                
-                # Füge einen Button hinzu, um die App neu zu laden
+                st.session_state["checked_expense"] = None  # Eintrag aus Session-State löschen
+        
                 if st.button("Refresh to view changes"):
-                    st.rerun()  # Lädt die App neu, ohne dass sich der Benutzer erneut einloggen muss
-
+                    st.rerun()
 
 
 
