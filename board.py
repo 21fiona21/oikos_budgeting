@@ -1231,7 +1231,7 @@ def app():
             try:
                 expense_id_str = str(expense_id)  # Stelle sicher, dass die ID als String übergeben wird
                 table.delete_item(Key={"id": expense_id_str})
-                st.success(f"Expense with ID {expense_id_str} successfully deleted!")
+                st.success(f"Expense successfully deleted!")
             except Exception as error:
                 st.error(f"Error deleting expense: {error}")
 
