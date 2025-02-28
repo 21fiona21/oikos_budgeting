@@ -658,6 +658,8 @@ def app():
             # Schritt 5: Sortiere die Einträge nach dem Rang ihres Projekts (höchstes Ranking zuerst)
             df_ordered = df_ordered.sort_values(by=['rank', 'exact_amount'], ascending=[True, False])
 
+            st.dataframe(df_ordered.set_index('id'), height = 250)
+
             # Schritt 6: Erstelle das Piechart basierend auf der Reihenfolge der Projekte
             fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
 
