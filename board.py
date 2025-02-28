@@ -662,16 +662,22 @@ def app():
             fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
 
             # Pie chart für exact_amount, basierend auf dem Ranking der Projekte
-            wedges, texts, autotexts = ax_pie.pie(
-                df_ordered['exact_amount'],
-                labels=None,  # Keine Labels direkt an den Wedges
-                colors=[get_color(project) for project in df_ordered['project']],  # Verwende die get_color Funktion
-                autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  # Zeige Prozentwerte für jedes Segment an
-                startangle=90,
-                counterclock=False,
-                wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  # Dünne Linie trennt die Wedges
-            )
+            df_ordered['exact_amount'] = df_ordered['exact_amount'].fillna(0)  # NaN zu 0 setzen
 
+            if df_ordered['exact_amount'].sum() == 0:
+                st.write("No exact expenses available to display.")  # Falls keine Werte existieren
+            else:
+                wedges, texts, autotexts = ax_pie.pie(
+                    df_ordered['exact_amount'],
+                    labels=None,  
+                    colors=[get_color(project) for project in df_ordered['project']],  
+                    autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  
+                    startangle=90,
+                    counterclock=False,
+                    wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  
+                )
+
+            
             # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
             for autotext in autotexts:
                 autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
