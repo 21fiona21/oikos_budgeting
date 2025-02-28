@@ -59,59 +59,59 @@ def app():
 
     # Funktion zum Abrufen aller Daten aus DynamoDB
     def get_data():
-    try:
-        response = table.scan()
-        data = response.get("Items", [])
-
-        # Falls die Tabelle leer ist, gib einen leeren DataFrame zurück
-        if not data:
-            return pd.DataFrame(columns=["id", "project", "title", "description", "expense_date", 
-                                         "exact_amount", "estimated", "conservative", "worst_case", "priority", "status"])
-
-        # DynamoDB speichert Zahlen als Dezimal, daher müssen wir sie in float/int konvertieren
-        for item in data:
-            item['exact_amount'] = float(item['exact_amount']) if 'exact_amount' in item and item['exact_amount'] else None
-            item['estimated'] = float(item['estimated']) if 'estimated' in item and item['estimated'] else None
-            item['conservative'] = float(item['conservative']) if 'conservative' in item and item['conservative'] else None
-            item['worst_case'] = float(item['worst_case']) if 'worst_case' in item and item['worst_case'] else None
-            item['priority'] = int(item['priority']) if 'priority' in item and item['priority'] else None
-            item['id'] = str(item['id']) if 'id' in item else None
-            item['project'] = str(item['project']) if 'project' in item else None
-            item['title'] = str(item['title']) if 'title' in item else None
-            item['description'] = str(item['description']) if 'description' in item else None
-            item['expense_date'] = str(item['expense_date']) if 'expense_date' in item else None
-            item['status'] = str(item['status']) if 'status' in item else "not assigned"
-
-        # Erstelle den DataFrame mit garantierten Spaltentypen
-        df = pd.DataFrame(data)
-
-        # Sicherstellen, dass fehlende Spalten vorhanden sind
-        required_columns = ["id", "project", "title", "description", "expense_date", 
-                            "exact_amount", "estimated", "conservative", "worst_case", "priority", "status"]
-        for col in required_columns:
-            if col not in df.columns:
-                df[col] = None
-
-        # Setze explizit die gewünschten Datentypen für die Spalten
-        df = df.astype({
-            "id": str,
-            "project": str,
-            "title": str,
-            "description": str,
-            "expense_date": str,
-            "exact_amount": "float64",
-            "estimated": "float64",
-            "conservative": "float64",
-            "worst_case": "float64",
-            "priority": "Int64",  # Int64 erlaubt auch NaN
-            "status": str
-        })
-
-        return df
-
-    except Exception as e:
-        st.error(f"Error connecting to DynamoDB: {e}")
-        return pd.DataFrame()
+        try:
+            response = table.scan()
+            data = response.get("Items", [])
+    
+            # Falls die Tabelle leer ist, gib einen leeren DataFrame zurück
+            if not data:
+                return pd.DataFrame(columns=["id", "project", "title", "description", "expense_date", 
+                                             "exact_amount", "estimated", "conservative", "worst_case", "priority", "status"])
+    
+            # DynamoDB speichert Zahlen als Dezimal, daher müssen wir sie in float/int konvertieren
+            for item in data:
+                item['exact_amount'] = float(item['exact_amount']) if 'exact_amount' in item and item['exact_amount'] else None
+                item['estimated'] = float(item['estimated']) if 'estimated' in item and item['estimated'] else None
+                item['conservative'] = float(item['conservative']) if 'conservative' in item and item['conservative'] else None
+                item['worst_case'] = float(item['worst_case']) if 'worst_case' in item and item['worst_case'] else None
+                item['priority'] = int(item['priority']) if 'priority' in item and item['priority'] else None
+                item['id'] = str(item['id']) if 'id' in item else None
+                item['project'] = str(item['project']) if 'project' in item else None
+                item['title'] = str(item['title']) if 'title' in item else None
+                item['description'] = str(item['description']) if 'description' in item else None
+                item['expense_date'] = str(item['expense_date']) if 'expense_date' in item else None
+                item['status'] = str(item['status']) if 'status' in item else "not assigned"
+    
+            # Erstelle den DataFrame mit garantierten Spaltentypen
+            df = pd.DataFrame(data)
+    
+            # Sicherstellen, dass fehlende Spalten vorhanden sind
+            required_columns = ["id", "project", "title", "description", "expense_date", 
+                                "exact_amount", "estimated", "conservative", "worst_case", "priority", "status"]
+            for col in required_columns:
+                if col not in df.columns:
+                    df[col] = None
+    
+            # Setze explizit die gewünschten Datentypen für die Spalten
+            df = df.astype({
+                "id": str,
+                "project": str,
+                "title": str,
+                "description": str,
+                "expense_date": str,
+                "exact_amount": "float64",
+                "estimated": "float64",
+                "conservative": "float64",
+                "worst_case": "float64",
+                "priority": "Int64",  # Int64 erlaubt auch NaN
+                "status": str
+            })
+    
+            return df
+    
+        except Exception as e:
+            st.error(f"Error connecting to DynamoDB: {e}")
+            return pd.DataFrame()
 
 
     # Funktion zum Abrufen der Farbe basierend auf dem Projektnamen
