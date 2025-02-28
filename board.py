@@ -663,9 +663,10 @@ def app():
 
             # Pie chart für exact_amount, basierend auf dem Ranking der Projekte
             df_ordered['exact_amount'] = df_ordered['exact_amount'].fillna(0)  # NaN zu 0 setzen
-
+            
             if df_ordered['exact_amount'].sum() == 0:
                 st.write("No exact expenses available to display.")  # Falls keine Werte existieren
+                autotexts = []  # Verhindert den UnboundLocalError
             else:
                 wedges, texts, autotexts = ax_pie.pie(
                     df_ordered['exact_amount'],
@@ -676,12 +677,14 @@ def app():
                     counterclock=False,
                     wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  
                 )
-
             
-            # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
-            for autotext in autotexts:
-                autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
-                autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
+            # Verhindere Fehler, falls `autotexts` leer ist
+            if autotexts:
+                # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
+                for autotext in autotexts:
+                    autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
+                    autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
+
 
             # Definiere die Labels für die Legende (Projektname und Prozente)
             legend_labels = [f"{row['project']}: {row['percentage']:.1f}%" for i, row in project_totals.iterrows()]
