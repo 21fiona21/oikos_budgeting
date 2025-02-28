@@ -120,6 +120,15 @@ def app():
     # Daten aus der Datenbank abrufen
     df = get_data()
 
+
+    # Gewünschte Spaltenreihenfolge definieren
+    desired_order = ["id", "project", "title", "description", "expense_date", 
+                     "exact_amount", "estimated", "conservative", "worst_case", "priority", "status"]
+    
+    # Spalten in der gewünschten Reihenfolge anordnen (überschreibt df)
+    df = df[desired_order]
+
+    
     if df is not None:
 
         # Radio Buttons für die Sortieroptionen
