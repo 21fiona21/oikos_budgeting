@@ -332,7 +332,7 @@ def app():
                                     <h4>{entry['title']}</h4>
                                     <p>{entry['description']}</p>
                                     <p><strong>Date: </strong>{entry['expense_date']}</p>
-                                    <p><strong>Amount:</strong> CHF {entry['exact_amount'] if entry['exact_amount'] else f"{entry['estimated']} / {entry['conservative']} / {entry['worst_case']}"}</p>
+                                    <p><strong>Amount:</strong> CHF {entry['exact_amount'] if pd.notna(entry['exact_amount']) else f"{entry['estimated'] or 0} / {entry['conservative'] or 0} / {entry['worst_case'] or 0}"}</p>
                                     <p><strong>Priority:</strong> {entry['priority']}</p>
                                     <p><strong>Status:</strong> {entry['status']}</p>
                                 </div>
