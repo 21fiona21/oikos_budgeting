@@ -624,39 +624,42 @@ def app():
             df_ordered = df_ordered.sort_values(by=['rank', 'exact_amount'], ascending=[True, False])
 
             # Schritt 6: Erstelle das Piechart basierend auf der Reihenfolge der Projekte
-            fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
-
-            # Pie chart für exact_amount, basierend auf dem Ranking der Projekte
-            wedges, texts, autotexts = ax_pie.pie(
-                df_ordered['exact_amount'],
-                labels=None,  # Keine Labels direkt an den Wedges
-                colors=[get_color(project) for project in df_ordered['project']],  # Verwende die get_color Funktion
-                autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  # Zeige Prozentwerte für jedes Segment an
-                startangle=90,
-                counterclock=False,
-                wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  # Dünne Linie trennt die Wedges
-            )
-
-            # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
-            for autotext in autotexts:
-                autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
-                autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
-
-            # Definiere die Labels für die Legende (Projektname und Prozente)
-            legend_labels = [f"{row['project']}: {row['percentage']:.1f}%" for i, row in project_totals.iterrows()]
-
-            # Erstellen der Legende basierend auf dem Projekt-Ranking
-            handles = [mpatches.Patch(color=get_color(project), label=legend_labels[i]) for i, project in enumerate(project_totals['project'])]
-
-            # Platzierung der Legende
-            ax_pie.legend(handles, legend_labels, title="Projects", loc="upper right", frameon=True, fancybox=True, framealpha=1, facecolor='white')
-
-            # Titel und Ausrichtung des Kuchendiagramms
-            ax_pie.set_title("Share of Exact Expenses by Project", fontsize=20, fontweight='bold')
-            ax_pie.axis('equal')  # Sicherstellen, dass es ein Kreis bleibt
-
-            # Zeige das Kuchendiagramm in Streamlit an
-            st.pyplot(fig_pie)
+            if df_ordered.empty:
+                st.warning("No data available for visualization.")
+            else:
+                fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
+    
+                # Pie chart für exact_amount, basierend auf dem Ranking der Projekte
+                wedges, texts, autotexts = ax_pie.pie(
+                    df_ordered['exact_amount'],
+                    labels=None,  # Keine Labels direkt an den Wedges
+                    colors=[get_color(project) for project in df_ordered['project']],  # Verwende die get_color Funktion
+                    autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  # Zeige Prozentwerte für jedes Segment an
+                    startangle=90,
+                    counterclock=False,
+                    wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  # Dünne Linie trennt die Wedges
+                )
+    
+                # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
+                for autotext in autotexts:
+                    autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
+                    autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
+    
+                # Definiere die Labels für die Legende (Projektname und Prozente)
+                legend_labels = [f"{row['project']}: {row['percentage']:.1f}%" for i, row in project_totals.iterrows()]
+    
+                # Erstellen der Legende basierend auf dem Projekt-Ranking
+                handles = [mpatches.Patch(color=get_color(project), label=legend_labels[i]) for i, project in enumerate(project_totals['project'])]
+    
+                # Platzierung der Legende
+                ax_pie.legend(handles, legend_labels, title="Projects", loc="upper right", frameon=True, fancybox=True, framealpha=1, facecolor='white')
+    
+                # Titel und Ausrichtung des Kuchendiagramms
+                ax_pie.set_title("Share of Exact Expenses by Project", fontsize=20, fontweight='bold')
+                ax_pie.axis('equal')  # Sicherstellen, dass es ein Kreis bleibt
+    
+                # Zeige das Kuchendiagramm in Streamlit an
+                st.pyplot(fig_pie)
 
 
 
@@ -679,39 +682,42 @@ def app():
             df_ordered = df_ordered.sort_values(by=['rank', 'estimated_complete'], ascending=[True, False])
 
             # Schritt 5: Erstelle das Piechart basierend auf der Reihenfolge der Projekte
-            fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
-
-            # Pie chart für estimated, basierend auf dem Ranking der Projekte
-            wedges, texts, autotexts = ax_pie.pie(
-                df_ordered['estimated_complete'],
-                labels=None,  # Keine Labels direkt an den Wedges
-                colors=[get_color(project) for project in df_ordered['project']],  # Verwende die get_color Funktion
-                autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  # Zeige Prozentwerte für jedes Segment an
-                startangle=90,
-                counterclock=False,
-                wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  # Dünne Linie trennt die Wedges
-            )
-
-            # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
-            for autotext in autotexts:
-                autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
-                autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
-
-            # Definiere die Labels für die Legende (Projektname und Prozente)
-            legend_labels = [f"{row['project']}: {row['percentage']:.1f}%" for i, row in project_totals.iterrows()]
-
-            # Erstellen der Legende basierend auf dem Projekt-Ranking
-            handles = [mpatches.Patch(color=get_color(project), label=legend_labels[i]) for i, project in enumerate(project_totals['project'])]
-
-            # Platzierung der Legende
-            ax_pie.legend(handles, legend_labels, title="Projects", loc="upper right", frameon=True, fancybox=True, framealpha=1, facecolor='white')
-
-            # Titel und Ausrichtung des Kuchendiagramms
-            ax_pie.set_title("Share of Expenses by Project; scenario: estimated", fontsize=20, fontweight='bold')
-            ax_pie.axis('equal')  # Sicherstellen, dass es ein Kreis bleibt
-
-            # Zeige das Kuchendiagramm in Streamlit an
-            st.pyplot(fig_pie)
+            if df_ordered.empty:
+                st.warning("No data available for visualization.")
+            else:
+                fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
+    
+                # Pie chart für estimated, basierend auf dem Ranking der Projekte
+                wedges, texts, autotexts = ax_pie.pie(
+                    df_ordered['estimated_complete'],
+                    labels=None,  # Keine Labels direkt an den Wedges
+                    colors=[get_color(project) for project in df_ordered['project']],  # Verwende die get_color Funktion
+                    autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  # Zeige Prozentwerte für jedes Segment an
+                    startangle=90,
+                    counterclock=False,
+                    wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  # Dünne Linie trennt die Wedges
+                )
+    
+                # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
+                for autotext in autotexts:
+                    autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
+                    autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
+    
+                # Definiere die Labels für die Legende (Projektname und Prozente)
+                legend_labels = [f"{row['project']}: {row['percentage']:.1f}%" for i, row in project_totals.iterrows()]
+    
+                # Erstellen der Legende basierend auf dem Projekt-Ranking
+                handles = [mpatches.Patch(color=get_color(project), label=legend_labels[i]) for i, project in enumerate(project_totals['project'])]
+    
+                # Platzierung der Legende
+                ax_pie.legend(handles, legend_labels, title="Projects", loc="upper right", frameon=True, fancybox=True, framealpha=1, facecolor='white')
+    
+                # Titel und Ausrichtung des Kuchendiagramms
+                ax_pie.set_title("Share of Expenses by Project; scenario: estimated", fontsize=20, fontweight='bold')
+                ax_pie.axis('equal')  # Sicherstellen, dass es ein Kreis bleibt
+    
+                # Zeige das Kuchendiagramm in Streamlit an
+                st.pyplot(fig_pie)
 
 
 
@@ -737,39 +743,42 @@ def app():
             df_ordered = df_ordered.sort_values(by=['rank', 'conservative_complete'], ascending=[True, False])
 
             # Schritt 6: Erstelle das Piechart basierend auf der Reihenfolge der Projekte
-            fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
-
-            # Pie chart für conservative, basierend auf dem Ranking der Projekte
-            wedges, texts, autotexts = ax_pie.pie(
-                df_ordered['conservative_complete'],
-                labels=None,  # Keine Labels direkt an den Wedges
-                colors=[get_color(project) for project in df_ordered['project']],  # Verwende die get_color Funktion
-                autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  # Zeige Prozentwerte für jedes Segment an
-                startangle=90,
-                counterclock=False,
-                wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  # Dünne Linie trennt die Wedges
-            )
-
-            # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
-            for autotext in autotexts:
-                autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
-                autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
-
-            # Definiere die Labels für die Legende (Projektname und Prozente)
-            legend_labels = [f"{row['project']}: {row['percentage']:.1f}%" for i, row in project_totals.iterrows()]
-
-            # Erstellen der Legende basierend auf dem Projekt-Ranking
-            handles = [mpatches.Patch(color=get_color(project), label=legend_labels[i]) for i, project in enumerate(project_totals['project'])]
-
-            # Platzierung der Legende
-            ax_pie.legend(handles, legend_labels, title="Projects", loc="upper right", frameon=True, fancybox=True, framealpha=1, facecolor='white')
-
-            # Titel und Ausrichtung des Kuchendiagramms
-            ax_pie.set_title("Share of Expenses by Project; scenario: conservative", fontsize=20, fontweight='bold')
-            ax_pie.axis('equal')  # Sicherstellen, dass es ein Kreis bleibt
-
-            # Zeige das Kuchendiagramm in Streamlit an
-            st.pyplot(fig_pie)
+            if df_ordered.empty:
+                st.warning("No data available for visualization.")
+            else:
+                fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
+    
+                # Pie chart für conservative, basierend auf dem Ranking der Projekte
+                wedges, texts, autotexts = ax_pie.pie(
+                    df_ordered['conservative_complete'],
+                    labels=None,  # Keine Labels direkt an den Wedges
+                    colors=[get_color(project) for project in df_ordered['project']],  # Verwende die get_color Funktion
+                    autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  # Zeige Prozentwerte für jedes Segment an
+                    startangle=90,
+                    counterclock=False,
+                    wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  # Dünne Linie trennt die Wedges
+                )
+    
+                # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
+                for autotext in autotexts:
+                    autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
+                    autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
+    
+                # Definiere die Labels für die Legende (Projektname und Prozente)
+                legend_labels = [f"{row['project']}: {row['percentage']:.1f}%" for i, row in project_totals.iterrows()]
+    
+                # Erstellen der Legende basierend auf dem Projekt-Ranking
+                handles = [mpatches.Patch(color=get_color(project), label=legend_labels[i]) for i, project in enumerate(project_totals['project'])]
+    
+                # Platzierung der Legende
+                ax_pie.legend(handles, legend_labels, title="Projects", loc="upper right", frameon=True, fancybox=True, framealpha=1, facecolor='white')
+    
+                # Titel und Ausrichtung des Kuchendiagramms
+                ax_pie.set_title("Share of Expenses by Project; scenario: conservative", fontsize=20, fontweight='bold')
+                ax_pie.axis('equal')  # Sicherstellen, dass es ein Kreis bleibt
+    
+                # Zeige das Kuchendiagramm in Streamlit an
+                st.pyplot(fig_pie)
 
 
 
@@ -794,39 +803,42 @@ def app():
             df_ordered = df_ordered.sort_values(by=['rank', 'worst_case_complete'], ascending=[True, False])
 
             # Schritt 6: Erstelle das Piechart basierend auf der Reihenfolge der Projekte
-            fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
-
-            # Pie chart für worst_case, basierend auf dem Ranking der Projekte
-            wedges, texts, autotexts = ax_pie.pie(
-                df_ordered['worst_case_complete'],
-                labels=None,  # Keine Labels direkt an den Wedges
-                colors=[get_color(project) for project in df_ordered['project']],  # Verwende die get_color Funktion
-                autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  # Zeige Prozentwerte für jedes Segment an
-                startangle=90,
-                counterclock=False,
-                wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  # Dünne Linie trennt die Wedges
-            )
-
-            # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
-            for autotext in autotexts:
-                autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
-                autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
-
-            # Definiere die Labels für die Legende (Projektname und Prozente)
-            legend_labels = [f"{row['project']}: {row['percentage']:.1f}%" for i, row in project_totals.iterrows()]
-
-            # Erstellen der Legende basierend auf dem Projekt-Ranking
-            handles = [mpatches.Patch(color=get_color(project), label=legend_labels[i]) for i, project in enumerate(project_totals['project'])]
-
-            # Platzierung der Legende
-            ax_pie.legend(handles, legend_labels, title="Projects", loc="upper right", frameon=True, fancybox=True, framealpha=1, facecolor='white')
-
-            # Titel und Ausrichtung des Kuchendiagramms
-            ax_pie.set_title("Share of Expenses by Project; scenario: worst case", fontsize=20, fontweight='bold')
-            ax_pie.axis('equal')  # Sicherstellen, dass es ein Kreis bleibt
-
-            # Zeige das Kuchendiagramm in Streamlit an
-            st.pyplot(fig_pie)
+            if df_ordered.empty:
+                st.warning("No data available for visualization.")
+            else:
+                fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
+    
+                # Pie chart für worst_case, basierend auf dem Ranking der Projekte
+                wedges, texts, autotexts = ax_pie.pie(
+                    df_ordered['worst_case_complete'],
+                    labels=None,  # Keine Labels direkt an den Wedges
+                    colors=[get_color(project) for project in df_ordered['project']],  # Verwende die get_color Funktion
+                    autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  # Zeige Prozentwerte für jedes Segment an
+                    startangle=90,
+                    counterclock=False,
+                    wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  # Dünne Linie trennt die Wedges
+                )
+    
+                # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
+                for autotext in autotexts:
+                    autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
+                    autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
+    
+                # Definiere die Labels für die Legende (Projektname und Prozente)
+                legend_labels = [f"{row['project']}: {row['percentage']:.1f}%" for i, row in project_totals.iterrows()]
+    
+                # Erstellen der Legende basierend auf dem Projekt-Ranking
+                handles = [mpatches.Patch(color=get_color(project), label=legend_labels[i]) for i, project in enumerate(project_totals['project'])]
+    
+                # Platzierung der Legende
+                ax_pie.legend(handles, legend_labels, title="Projects", loc="upper right", frameon=True, fancybox=True, framealpha=1, facecolor='white')
+    
+                # Titel und Ausrichtung des Kuchendiagramms
+                ax_pie.set_title("Share of Expenses by Project; scenario: worst case", fontsize=20, fontweight='bold')
+                ax_pie.axis('equal')  # Sicherstellen, dass es ein Kreis bleibt
+    
+                # Zeige das Kuchendiagramm in Streamlit an
+                st.pyplot(fig_pie)
 
 
 
