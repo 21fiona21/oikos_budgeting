@@ -70,17 +70,30 @@ def app():
     
             # DynamoDB speichert Zahlen als Dezimal, daher müssen wir sie in float/int konvertieren
             for item in data:
-                item['exact_amount'] = float(item['exact_amount']) if 'exact_amount' in item and item['exact_amount'] else None
-                item['estimated'] = float(item['estimated']) if 'estimated' in item and item['estimated'] else None
-                item['conservative'] = float(item['conservative']) if 'conservative' in item and item['conservative'] else None
-                item['worst_case'] = float(item['worst_case']) if 'worst_case' in item and item['worst_case'] else None
-                item['priority'] = int(item['priority']) if 'priority' in item and item['priority'] else None
-                item['id'] = str(item['id']) if 'id' in item else None
-                item['project'] = str(item['project']) if 'project' in item else None
-                item['title'] = str(item['title']) if 'title' in item else None
-                item['description'] = str(item['description']) if 'description' in item else None
-                item['expense_date'] = str(item['expense_date']) if 'expense_date' in item else None
-                item['status'] = str(item['status']) if 'status' in item else "not assigned"
+                if 'exact_amount' in item:
+                    item['exact_amount'] = float(item['exact_amount'])
+                if 'estimated' in item:
+                    item['estimated'] = float(item['estimated'])
+                if 'conservative' in item:
+                    item['conservative'] = float(item['conservative'])
+                if 'worst_case' in item:
+                    item['worst_case'] = float(item['worst_case'])
+                if 'priority' in item:
+                    item['priority'] = int(item['priority'])
+                if 'id' in item:
+                    item['id'] = str(item['id'])
+                if 'project' in item:
+                    item['project'] = str(item['project'])
+                if 'title' in item:
+                    item['title'] = str(item['title'])
+                if 'description' in item:
+                    item['description'] = str(item['description'])
+                if 'expense_date' in item:
+                    item['expense_date'] = str(item['expense_date'])
+                if 'status' in item:
+                    item['status'] = str(item['status'])
+                else:
+                    item['status'] = "not assigned"  # Standardwert für fehlendes Statusfeld
     
             # Erstelle den DataFrame mit garantierten Spaltentypen
             df = pd.DataFrame(data)
