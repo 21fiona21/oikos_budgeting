@@ -99,6 +99,11 @@ def app():
                 "title": str,
                 "description": str,
                 "expense_date": str,
+                "exact_amount": "float64",
+                "estimated": "float64",
+                "conservative": "float64",
+                "worst_case": "float64",
+                "priority": "Int64",  # Int64 erlaubt auch NaN
                 "status": str
             }, errors="ignore")  # Falls Spalten fehlen, wird kein Fehler geworfen
     
