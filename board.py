@@ -10,7 +10,20 @@ from io import BytesIO
 import xlsxwriter
 import plotly.express as px
 import os
+import boto3
+import uuid
 
+
+# AWS DynamoDB-Client initialisieren
+dynamodb = boto3.resource(
+    "dynamodb",
+    region_name=os.getenv("AWS_REGION"),
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+)
+
+table_name = "oikos_budgeting"
+table = dynamodb.Table(table_name)
 
 
 # Benutzer und Passwörter aus Umgebungsvariablen lesen
@@ -44,37 +57,61 @@ def app():
     st.write("")
     st.header("View registered expenses")
 
+    # Funktion zum Abrufen aller Daten aus DynamoDB
     def get_data():
         try:
-            # Verbindung zur PostgreSQL-Datenbank herstellen
-            connection = psycopg2.connect(
-                host=os.getenv("DB_HOST"),
-                port=os.getenv("DB_PORT"),
-                dbname=os.getenv("DB_NAME"),
-                user=os.getenv("DB_USER"),
-                password=os.getenv("DB_PASSWORD")
-            )
-            cursor = connection.cursor()
-
-            # SQL-Abfrage ausführen, um alle Daten aus der Tabelle "expenses" abzurufen
-            cursor.execute("SELECT * FROM expenses;")
-            data = cursor.fetchall()
-
-            # Spaltennamen abrufen
-            colnames = [desc[0] for desc in cursor.description]
-
-            # In DataFrame umwandeln
-            df = pd.DataFrame(data, columns=colnames)
-
+            response = table.scan()
+            data = response.get("Items", [])
+            
+            # Falls die Tabelle leer ist, gib einen leeren DataFrame zurück
+            if not data:
+                return pd.DataFrame(columns=["id", "project", "title", "description", "expense_date", 
+                                             "exact_amount", "estimated", "conservative", "worst_case", "priority", "status"])
+            
+            # Konvertiere DynamoDB-Daten und prüfe auf None
+            for item in data:
+                item['exact_amount'] = float(item['exact_amount']) if 'exact_amount' in item and item['exact_amount'] is not None else None
+                item['estimated'] = float(item['estimated']) if 'estimated' in item and item['estimated'] is not None else None
+                item['conservative'] = float(item['conservative']) if 'conservative' in item and item['conservative'] is not None else None
+                item['worst_case'] = float(item['worst_case']) if 'worst_case' in item and item['worst_case'] is not None else None
+                item['priority'] = int(item['priority']) if 'priority' in item and item['priority'] is not None else None
+                item['id'] = str(item['id']) if 'id' in item else None
+                item['project'] = str(item['project']) if 'project' in item else None
+                item['title'] = str(item['title']) if 'title' in item else None
+                item['description'] = str(item['description']) if 'description' in item else None
+                item['expense_date'] = str(item['expense_date']) if 'expense_date' in item else None
+                item['status'] = str(item['status']) if 'status' in item else "not assigned"  # Standardwert setzen
+            
+            # Erstelle den DataFrame
+            df = pd.DataFrame(data)
+    
+            # Sicherstellen, dass alle Spalten existieren
+            required_columns = ["id", "project", "title", "description", "expense_date", 
+                                "exact_amount", "estimated", "conservative", "worst_case", "priority", "status"]
+            for col in required_columns:
+                if col not in df.columns:
+                    df[col] = None
+    
+            # Optimierte Typumwandlung ohne doppelte Verarbeitung
+            df = df.astype({
+                "id": str,
+                "project": str,
+                "title": str,
+                "description": str,
+                "expense_date": str,
+                "exact_amount": "float64",
+                "estimated": "float64",
+                "conservative": "float64",
+                "worst_case": "float64",
+                "priority": "Int64",  # Int64 erlaubt auch NaN
+                "status": str
+            }, errors="ignore")  # Falls Spalten fehlen, wird kein Fehler geworfen
+    
             return df
-
+    
         except Exception as e:
-            st.error(f"Error connecting to database: {e}")
-
-        finally:
-            if connection:
-                cursor.close()
-                connection.close()
+            st.error(f"Error connecting to DynamoDB: {e}")
+            return pd.DataFrame()
 
 
     # Funktion zum Abrufen der Farbe basierend auf dem Projektnamen
@@ -92,7 +129,7 @@ def app():
         elif project_name == "ChangeHub":
             return "#f7be6d"
         elif project_name == "oikos Solar":
-            return "#7a89f7"
+            return "#ffda03"
         elif project_name == "oikos Catalyst":
             return "#7fcaf9"
         elif project_name == "Climate Neutral Events":
@@ -247,35 +284,18 @@ def app():
         # Generiere die Container basierend auf dem sortierten DataFrame
         st.write("")
 
+        # Funktion zum Aktualisieren des Status eines Eintrags
         def update_status(expense_id, new_status):
             try:
-                # Verbindung zur PostgreSQL-Datenbank herstellen
-                connection = psycopg2.connect(
-                    host=os.getenv("DB_HOST"),
-                    port=os.getenv("DB_PORT"),
-                    dbname=os.getenv("DB_NAME"),
-                    user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD")
+                table.update_item(
+                    Key={"id": str(expense_id)},  # ID muss String sein
+                    UpdateExpression="SET #s = :s",
+                    ExpressionAttributeNames={"#s": "status"},
+                    ExpressionAttributeValues={":s": new_status},
+                    ReturnValues="UPDATED_NEW"
                 )
-
-                cursor = connection.cursor()
-
-                # Konvertiere die expense_id zu einem regulären int, um den Fehler zu vermeiden
-                cursor.execute("""
-                    UPDATE expenses
-                    SET status = %s
-                    WHERE id = %s;
-                """, (new_status, int(expense_id)))  # Hier konvertieren wir die ID
-
-                connection.commit()
-
             except Exception as error:
                 st.error(f"Error updating expense status: {error}")
-
-            finally:
-                if connection:
-                    cursor.close()
-                    connection.close()
 
 
         def display_expenses_by_status(df, status, section_title):
@@ -312,7 +332,7 @@ def app():
                                     <h4>{entry['title']}</h4>
                                     <p>{entry['description']}</p>
                                     <p><strong>Date: </strong>{entry['expense_date']}</p>
-                                    <p><strong>Amount:</strong> CHF {entry['exact_amount'] if entry['exact_amount'] else f"{entry['estimated']} / {entry['conservative']} / {entry['worst_case']}"}</p>
+                                    <p><strong>Amount:</strong> CHF {entry['exact_amount'] if pd.notna(entry['exact_amount']) else f"{entry['estimated'] or 0} / {entry['conservative'] or 0} / {entry['worst_case'] or 0}"}</p>
                                     <p><strong>Priority:</strong> {entry['priority']}</p>
                                     <p><strong>Status:</strong> {entry['status']}</p>
                                 </div>
@@ -642,20 +662,29 @@ def app():
             fig_pie, ax_pie = plt.subplots(figsize=(10, 10))
 
             # Pie chart für exact_amount, basierend auf dem Ranking der Projekte
-            wedges, texts, autotexts = ax_pie.pie(
-                df_ordered['exact_amount'],
-                labels=None,  # Keine Labels direkt an den Wedges
-                colors=[get_color(project) for project in df_ordered['project']],  # Verwende die get_color Funktion
-                autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  # Zeige Prozentwerte für jedes Segment an
-                startangle=90,
-                counterclock=False,
-                wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  # Dünne Linie trennt die Wedges
-            )
+            df_ordered['exact_amount'] = df_ordered['exact_amount'].fillna(0)  # NaN zu 0 setzen
+            
+            if df_ordered['exact_amount'].sum() == 0:
+                st.write("No exact expenses available to display.")  # Falls keine Werte existieren
+                autotexts = []  # Verhindert den UnboundLocalError
+            else:
+                wedges, texts, autotexts = ax_pie.pie(
+                    df_ordered['exact_amount'],
+                    labels=None,  
+                    colors=[get_color(project) for project in df_ordered['project']],  
+                    autopct=lambda p: f'{p:.1f}%' if p > 0 else '',  
+                    startangle=90,
+                    counterclock=False,
+                    wedgeprops={'edgecolor': 'grey', 'linewidth': 0.5}  
+                )
+            
+            # Verhindere Fehler, falls `autotexts` leer ist
+            if autotexts:
+                # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
+                for autotext in autotexts:
+                    autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
+                    autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
 
-            # Formatiere die Prozentwerte in den Segmenten (automatisch hinzugefügt)
-            for autotext in autotexts:
-                autotext.set_color('black')  # Setze die Textfarbe auf Schwarz
-                autotext.set_fontsize(10)    # Setze die Schriftgröße für bessere Lesbarkeit
 
             # Definiere die Labels für die Legende (Projektname und Prozente)
             legend_labels = [f"{row['project']}: {row['percentage']:.1f}%" for i, row in project_totals.iterrows()]
@@ -1137,39 +1166,40 @@ def app():
         st.write("")
 
 
-        # Funktion zum Einfügen der Daten in die PostgreSQL-Datenbank mit Status
+        # Funktion zum Ermitteln der nächsten freien ID
+        def get_next_id():
+            try:
+                response = table.scan(ProjectionExpression="id")
+                existing_ids = [int(item["id"]) for item in response.get("Items", []) if item["id"].isdigit()]
+                return str(max(existing_ids) + 1) if existing_ids else "1"
+            except Exception as e:
+                st.error(f"Error retrieving next ID: {e}")
+                return "1"
+        
+        # Funktion zum Einfügen eines neuen Eintrags in DynamoDB
         def insert_expense(project, title, description, date, exact_amount, estimated, conservative, worst_case, priority, status="not assigned"):
             try:
-                # Verbindung zur PostgreSQL-Datenbank herstellen
-                connection = psycopg2.connect(
-                    host=os.getenv("DB_HOST"),
-                    port=os.getenv("DB_PORT"),
-                    dbname=os.getenv("DB_NAME"),
-                    user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD")
-                )
-                
-                cursor = connection.cursor()
-                
-                # Daten in die Tabelle expenses einfügen, jetzt inklusive Status
-                cursor.execute("""
-                    INSERT INTO expenses (project, title, description, expense_date, exact_amount, estimated, conservative, worst_case, priority, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (project, title, description, date, exact_amount, estimated, conservative, worst_case, priority, status))
-                
-                connection.commit()
-                st.success("Expense successfully saved!")
-                # Füge einen Button hinzu, um die App neu zu laden
+                expense_id = get_next_id()  # Neue ID berechnen
+                expense_item = {
+                    "id": expense_id,  # Fortlaufende ID statt UUID
+                    "project": project,
+                    "title": title,
+                    "description": description,
+                    "expense_date": str(date) if date else None,
+                    "exact_amount": str(exact_amount) if exact_amount else None,
+                    "estimated": str(estimated) if estimated else None,
+                    "conservative": str(conservative) if conservative else None,
+                    "worst_case": str(worst_case) if worst_case else None,
+                    "priority": int(priority) if priority else None,
+                    "status": status
+                }
+                table.put_item(Item=expense_item)
+                st.success(f"Expense successfully saved!")
                 if st.button("Refresh to view changes"):
-                    st.rerun() 
-            
+                    st.rerun()
             except Exception as error:
                 st.error(f"Error saving expense: {error}")
-            
-            finally:
-                if connection:
-                    cursor.close()
-                    connection.close()
+                
 
 
         st.subheader("Enter an expense")
@@ -1238,35 +1268,16 @@ def app():
 
 
 
-        # Funktion zum Löschen eines Eintrags aus der PostgreSQL-Datenbank
+
+
+        # Funktion zum Löschen eines Eintrags
         def delete_expense_by_id(expense_id):
             try:
-                connection = psycopg2.connect(
-                    host=os.getenv("DB_HOST"),
-                    port=os.getenv("DB_PORT"),
-                    dbname=os.getenv("DB_NAME"),
-                    user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD")
-                )
-                cursor = connection.cursor()
-
-                # SQL-Befehl zum Löschen des Eintrags mit der spezifischen ID
-                cursor.execute("DELETE FROM expenses WHERE id = %s RETURNING id;", (expense_id,))
-                deleted_id = cursor.fetchone()  # Überprüfen, ob eine Zeile gelöscht wurde
-                connection.commit()
-
-                if deleted_id:
-                    st.success(f"Expense with ID {expense_id} successfully deleted!")
-                else:
-                    st.error(f"No expense found with ID {expense_id}.")
-            
+                expense_id_str = str(expense_id)  # Stelle sicher, dass die ID als String übergeben wird
+                table.delete_item(Key={"id": expense_id_str})
+                st.success(f"Expense successfully deleted!")
             except Exception as error:
                 st.error(f"Error deleting expense: {error}")
-            
-            finally:
-                if connection:
-                    cursor.close()
-                    connection.close()
 
 
         # ID-Eingabefeld zum Löschen
@@ -1282,64 +1293,46 @@ def app():
         if st.button("Check"):
             if expense_id_to_delete:
                 try:
-                    # Verbindung zur Datenbank herstellen
-                    connection = psycopg2.connect(
-                        host=os.getenv("DB_HOST"),
-                        port=os.getenv("DB_PORT"),
-                        dbname=os.getenv("DB_NAME"),
-                        user=os.getenv("DB_USER"),
-                        password=os.getenv("DB_PASSWORD")
-                    )
-                    cursor = connection.cursor()
-
-                    # SQL-Abfrage, um den Eintrag mit der spezifischen ID zu finden
-                    cursor.execute("SELECT * FROM expenses WHERE id = %s;", (expense_id_to_delete,))
-
-                    entry = cursor.fetchone()
-                    
+                    expense_id_str = str(expense_id_to_delete)  # ID in String umwandeln
+                    response = table.get_item(Key={"id": expense_id_str})
+                    entry = response.get("Item")
+        
                     if entry:
                         st.session_state["checked_expense"] = entry  # Speichere den Eintrag im Session-State
                     else:
-                        st.error(f"No entry found with ID {expense_id_to_delete}")
+                        st.error(f"No entry found with ID {expense_id_str}")
+        
                 except Exception as error:
                     st.error(f"Error fetching expense: {error}")
-                finally:
-                    if connection:
-                        cursor.close()
-                        connection.close()
-
-        # Zeige den überprüften Eintrag an, wenn er im Session-State vorhanden ist
+        
+        # Zeige den überprüften Eintrag an
         if st.session_state["checked_expense"]:
             entry = st.session_state["checked_expense"]
-            
-            # Setze die Farbe basierend auf dem Projektnamen des überprüften Eintrags
-            project_name = entry[1]  # Annahme: Der Projektname befindet sich im zweiten Feld des Eintrags
+        
+            # Stelle sicher, dass der Key "project" existiert
+            project_name = entry.get("project", "Unknown")
             color = get_color(project_name)
-            
+        
             container_content = f"""
                 <div style='background-color: {color}; padding: 15px; border-radius: 10px; margin-bottom: 10px;'>
-                    <p><strong>ID: </strong>{entry[0]}</p>
-                    <p>{entry[1]}<p>
-                    <h4>{entry[2]}</h4>
-                    <p>{entry[3]}</p>
-                    <p><strong>Date: </strong>{entry[4]}</p>
-                    <p><strong>Amount: </strong>CHF {entry[5] if entry[5] is not None else f"{entry[6]} / {entry[7]} / {entry[8]}"}</p>
-                    <p><strong>Priority: </strong>{entry[9]}</p>
+                    <p><strong>ID: </strong>{entry["id"]}</p>
+                    <p><strong>Project: </strong>{entry["project"]}</p>
+                    <h4>{entry["title"]}</h4>
+                    <p>{entry["description"]}</p>
+                    <p><strong>Date: </strong>{entry["expense_date"]}</p>
+                    <p><strong>Amount: </strong>CHF {entry["exact_amount"] if entry["exact_amount"] is not None else f"{entry['estimated']} / {entry['conservative']} / {entry['worst_case']}"}</p>
+                    <p><strong>Priority: </strong>{entry["priority"]}</p>
                 </div>
             """
             st.markdown(container_content, unsafe_allow_html=True)
-
-            
-            # Button zum Löschen anzeigen, nachdem der Eintrag angezeigt wurde
+        
+            # Button zum Löschen anzeigen
             if st.button("Delete"):
                 delete_expense_by_id(expense_id_to_delete)
-                # Nach dem Löschen den Eintrag aus dem Session-State entfernen
-                st.session_state["checked_expense"] = None
-                
-                # Füge einen Button hinzu, um die App neu zu laden
+                st.session_state["checked_expense"] = None  # Eintrag aus Session-State löschen
+        
                 if st.button("Refresh to view changes"):
-                    st.rerun()  # Lädt die App neu, ohne dass sich der Benutzer erneut einloggen muss
-
+                    st.rerun()
 
 
 
