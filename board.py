@@ -129,7 +129,7 @@ def app():
         elif project_name == "ChangeHub":
             return "#f7be6d"
         elif project_name == "oikos Solar":
-            return "#7a89f7"
+            return "#ffda03"
         elif project_name == "oikos Catalyst":
             return "#7fcaf9"
         elif project_name == "Climate Neutral Events":
